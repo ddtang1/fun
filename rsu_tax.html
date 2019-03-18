@@ -1,0 +1,1578 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="UTF-8">
+
+<title>The Unofficial RSU Tax Analyzer</title>
+
+<!-- Reference Custom Functions -->
+<script type="text/javascript" src="rsu_tax.js"></script>
+
+<!-- Reference JS, Popper.js, and jQuery -->
+<script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+
+<!-- Reference Bootstrap CSS -->
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+
+<link rel="shortcut icon" href="/tax-favicon.ico" type="image/x-icon">
+<link rel="icon" href="/tax-favicon.ico" type="image/x-icon">
+
+</head>
+
+<body>
+
+<!-- Navbar -->
+<nav class="navbar navbar-dark bg-dark mb-1">
+	<span class="navbar-brand mb-0 h1">The Unofficial RSU Tax Analyzer</span>
+</nav>
+
+<!-- Disclaimer Alert -->
+<div class="alert alert-info mb-3" role="alert">
+	Everyone's situation is different and it's possible this estimator will not accurately estimate your taxes. Be sure to review your situation with a professional tax advisor. <a href="#" class="alert-link" onclick="showDisclaimer();">Learn More</a>
+</div>
+
+<div class="container">
+
+<!-- Disclaimer Card -->
+<div id="disclaimer_card" class="card mx-auto collapse show" style="max-width: 60rem;">
+	<div class="card-header bg-primary text-light">Notes and Disclaimers</div>
+	<div class="card-body">
+		<h5 class="card-title">Disclaimer</h5>
+		<p class="card-text">I am not an official tax calculator. I am an automated tool that calculates estimated taxes based on stuff I found on the Internet. If you use me, you agree that neither I nor my creator are liable for any incorrect estimates. Always consult a real tax professional for more accurate scenario modeling. No data is stored by this app. Print or screenshot your results if you'd like to save them.</p>
+
+		<h5 class="card-title">Limitations and Assumptions</h5>
+		<p class="card-text">Right now, I'm only able to calculate tax estimates as if you earned restricted stock units (RSUs) in San Francisco, California. I'm calculating California tax estimates based on the 2018 brackets, since 2019 hasn't been released yet. I can't handle stock options. I can't handle tax filing statuses of Married Filing Separately or Qualifying Widow(er). Also, I don't think about or process complex income like rents, royalties, retirement/social security, long-term capital gains/losses, or self-employment. I assume cash bonuses and RSU grants are withheld separately at supplemental tax rates (i.e. not part of your normal paycheck) and that cash bonuses are paid at the beginning of the year, subject to full FICA withholding. I don't factor in credits or deductions beyond standard/itemized deductions (e.g. earned income credit, child tax credit, student loan interest deduction, education credits, and dependent care expenses). I assume all of your base income is subject to normal withholding that is equivalent to your actual taxes owed on that income. I assume your RSUs vest monthly on the first each month and that your paychecks come twice per month on the 1st and 15th. Finally, if you're Married Filing Jointly or have dependents, I assume everyone is earning income with a uniform base income and RSU structure, subject to standard withholding.</p>
+	
+	<button type="button" class="btn btn-danger float-left" onclick="exitPage();">I don't like this, I'm out.</button>
+	<button type="button" class="btn btn-success float-right" onclick="agreeToDisclaimer();">I agree, let's go!</button>
+	</div>
+</div>
+
+<!-- Input Card -->
+<div id="input_card" class="card mx-auto collapse mb-3" style="max-width: 40rem;">
+	<div class="card-header">Analysis Inputs - Tax Year 2019</div>
+	<div class="card-body">
+
+	<!-- Form Inputs -->
+	<form id="input_form">
+
+	<div class="input-group mb-2">
+	  <div class="input-group-prepend">
+	    <span class="input-group-text">Tax Filing Status</span>
+	  </div>
+		<select class="form-control" id="filing_status" onchange="setDeductions();">
+			<option value = "single" selected="selected">Single</option>
+			<option value = "mfj">Married Filing Jointly</option>
+			<option value = "hoh">Head of Household</option>
+		</select>
+		<input type="hidden" id="filing_status_previous" value="single">
+	</div>
+
+	<div class="input-group mb-1">
+		<div class="input-group-prepend">
+	    	<span class="input-group-text">Income with Withholding</span>
+		</div>
+		<div class="input-group-prepend">
+			<span class="input-group-text">$</span>
+		</div>
+		<input type="number" id="base_income" class="form-control" aria-label="Base Income">
+		<div class="input-group-append">
+			<span class="input-group-text">.00</span>
+		</div>
+	</div>
+
+	<div class="input-group mb-2 small font-italic">
+		Include your base pre-tax cash salary and other income subject to standard tax withholding.
+	</div>
+
+	<div class="input-group mb-1">
+		<div class="input-group-prepend">
+	    	<span class="input-group-text">Income without Withholding</span>
+		</div>
+		<div class="input-group-prepend">
+			<span class="input-group-text">$</span>
+		</div>
+		<input type="number" id="base_income_no_withholding" class="form-control" aria-label="Base Income without Withholding">
+		<div class="input-group-append">
+			<span class="input-group-text">.00</span>
+		</div>
+	</div>
+
+	<div class="input-group mb-2 small font-italic">
+		Include pre-tax income such as interest and dividends that did not have taxes withheld.
+	</div>
+
+	<div class="input-group mb-1">
+		<div class="input-group-prepend">
+	    	<span class="input-group-text">Cash Bonus</span>
+		</div>
+		<div class="input-group-prepend">
+			<span class="input-group-text">$</span>
+		</div>
+		<input type="number" id="cash_bonus" class="form-control" aria-label="Cash Bonus">
+		<div class="input-group-append">
+			<span class="input-group-text">.00</span>
+		</div>
+	</div>
+
+	<div class="input-group mb-4 small font-italic">
+		Include any cash bonuses you expect to receive this year.
+	</div>
+
+	<div class="input-group mb-1">
+		<div class="input-group-prepend">
+	    	<span class="input-group-text">Federal Tax Deductions</span>
+		</div>
+		<div class="input-group-prepend">
+			<span class="input-group-text">$</span>
+		</div>
+		<input type="number" id="federal_deductions" class="form-control" aria-label="Federal Tax Deductions" value="12200">
+		<div class="input-group-append">
+			<span class="input-group-text">.00</span>
+		</div>
+	</div>
+
+	<div class="input-group mb-2 small font-italic">
+		Change this only if you plan to itemize deductions greater than the standard deduction.
+	</div>
+
+	<div class="input-group mb-1">
+		<div class="input-group-prepend">
+	    	<span class="input-group-text">State Tax Deductions</span>
+		</div>
+		<div class="input-group-prepend">
+			<span class="input-group-text">$</span>
+		</div>
+		<input type="number" id="state_deductions" class="form-control" aria-label="State Tax Deductions" value="4401">
+		<div class="input-group-append">
+			<span class="input-group-text">.00</span>
+		</div>
+	</div>
+
+	<div class="input-group mb-2 small font-italic">
+		Change this only if you plan to itemize deductions greater than the standard deduction.
+	</div>
+
+	<div class="input-group mb-1">
+		<div class="input-group-prepend">
+	    	<span class="input-group-text">Federal Supplemental Withholding</span>
+		</div>
+		<input type="number" id="federal_supplemental_withholding" class="form-control" aria-label="Federal Supplemental Withholding" value="22.00">
+		<div class="input-group-append">
+			<span class="input-group-text">%</span>
+		</div>
+	</div>
+
+	<div class="input-group mb-2 small font-italic">
+		Change this only if your company withholds bonus/supplemental income at a higher rate.
+	</div>
+
+	<div class="input-group mb-1">
+		<div class="input-group-prepend">
+	    	<span class="input-group-text">State Supplemental Withholding</span>
+		</div>
+		<input type="number" id="state_supplemental_withholding" class="form-control" aria-label="State Supplemental Withholding" value="10.23">
+		<div class="input-group-append">
+			<span class="input-group-text">%</span>
+		</div>
+	</div>
+
+	<div class="input-group mb-2 small font-italic">
+		Change this only if your company withholds bonus/supplemental income at a higher rate.
+	</div>
+
+	<div class="input-group mb-1">
+		<div class="input-group-prepend">
+	    	<span class="input-group-text">Local Taxes/Withholding</span>
+		</div>
+		<input type="number" id="local_withholding" class="form-control" aria-label="Local Taxes and Withholding" value="1.16">
+		<div class="input-group-append">
+			<span class="input-group-text">%</span>
+		</div>
+	</div>
+
+	<div class="input-group mb-4 small font-italic">
+		Change this only if you are not subject to local payroll taxes.
+	</div>
+
+	<div class="input-group mb-2">
+		<div class="input-group-prepend">
+	    	<span class="input-group-text">Initial Issue/Vest Date</span>
+		</div>
+		<input class="form-control" type="date" value="2019-07-01" id="issue_date" aria-label="Issue Date">
+		<div class="input-group-append">
+			<span class="input-group-text">Must be in 2019</span>
+		</div>
+	</div>
+
+	<div class="input-group mb-2">
+		<div class="input-group-prepend">
+	    	<span class="input-group-text">RSUs Earned @ Initial Issue Date</span>
+		</div>
+		<input type="number" id="rsus_vested_at_issue" class="form-control" aria-label="Vested RSUs">
+	</div>
+
+	<div class="input-group mb-1">
+		<div class="input-group-prepend">
+	    	<span class="input-group-text">RSUs Earned @ End of 2019</span>
+		</div>
+		<input type="number" id="rsus_vested_at_year_end" class="form-control" aria-label="RSUs Vested at Year End">
+	</div>
+
+	<div class="input-group mb-2 small font-italic">
+		Include all RSUs earned by 12/31/2019 including those at initial issue.
+	</div>
+
+	<div class="input-group mb-1">
+		<div class="input-group-prepend">
+	    	<span class="input-group-text">Average Stock Price at Issue/Vest</span>
+		</div>
+		<div class="input-group-prepend">
+			<span class="input-group-text">$</span>
+		</div>
+		<input type="number" id="price_issue_estimate" class="form-control" aria-label="Issue Price">
+		<div class="input-group-append">
+			<span class="input-group-text">.00</span>
+		</div>
+	</div>
+
+	<div class="input-group mb-2 small font-italic">
+		<span id="issue_estimate_note">I'll calculate 10.00%, 50.00%, 100.00%, 150.00%, and 200.00% scenarios based on this estimate.</span>&nbsp;<a href="#" class="text-muted" onclick="openCustomization();">Customize</a>
+	</div>
+
+	<div class="input-group mb-2">
+	  <div class="input-group-prepend">
+	    <div class="input-group-text">
+	      <input type="checkbox" id="price_issue_final" aria-label="Issue Price Final Status">
+	    </div>
+	  </div>
+	  <input type="text" id="price_issue_final_explain" class="form-control" aria-label="Issue Price Explanation" value="Issue Price is Finalized" disabled>
+	  <div class="input-group-append">
+			<span class="input-group-text">If final, I won't calculate multiple scenarios</span>
+		</div>
+	</div>
+
+	<div class="input-group mb-1">
+		<div class="input-group-prepend">
+	    	<span class="input-group-text">Percent Vested RSUs Selling This Year</span>
+		</div>
+		<input type="number" id="rsus_sold" class="form-control" aria-label="RSUs Sold This Year">
+		<div class="input-group-append">
+			<span class="input-group-text">%</span>
+		</div>
+	</div>
+
+	<div class="input-group mb-2 small font-italic">
+		Only include the percent of earned RSUs you plan to sell in 2019.
+	</div>
+
+	<div class="input-group mb-1">
+		<div class="input-group-prepend">
+	    	<span class="input-group-text">Average Stock Price at Sale</span>
+		</div>
+		<div class="input-group-prepend">
+			<span class="input-group-text">$</span>
+		</div>
+		<input type="number" id="price_sale_estimate" class="form-control" aria-label="Sale Price">
+		<div class="input-group-append">
+			<span class="input-group-text">.00</span>
+		</div>
+	</div>
+
+	<div class="input-group mb-2 small font-italic">
+		<span id="sale_estimate_note">I'll calculate 0.00%, 50.00%, 100.00%, 150.00%, and 200.00% scenarios based on this estimate.</span>&nbsp;<a href="#" class="text-muted" onclick="openCustomization();">Customize</a>
+	</div>
+
+	<div class="input-group mb-4">
+	  <div class="input-group-prepend">
+	    <div class="input-group-text">
+	      <input type="checkbox" id="price_sale_final" aria-label="Sale Price Final Status">
+	    </div>
+	  </div>
+	  <input type="text" id="price_sale_final_explain" class="form-control" aria-label="Sale Price Explanation" value="Sale Price is Finalized" disabled>
+	  <div class="input-group-append">
+			<span class="input-group-text">If final, I won't calculate multiple scenarios</span>
+		</div>
+	</div>
+
+	<button type="button" class="btn btn-danger float-left mr-2" onclick="resetInputForm();">Reset</button>
+	<button type="button" class="btn btn-secondary float-left" onclick="randomlySetInputValues();">Use Test Values</button>
+	<button type="button" class="btn btn-success float-right" onclick="analyzeTaxes();">Analyze!</button>
+
+	</form>
+	</div>
+</div>
+
+</div>
+
+<!-- Customize Estimates Card -->
+<div id="customize_card" class="card mx-auto collapse mb-3" style="max-width: 25rem;">
+	<div class="card-header">Customize Issue and Sale Scenarios</div>
+	<div class="card-body">
+
+	<!-- Form Inputs -->
+	<form id="customize_form">
+
+	<div class="input-group mb-1">
+		<div class="input-group-prepend">
+	    	<span class="input-group-text">Issue Price - Lowest Value</span>
+		</div>
+		<input type="number" id="issue0" class="form-control" aria-label="Issue Price Lowest Value" value ="10.00">
+		<div class="input-group-append">
+			<span class="input-group-text">%</span>
+		</div>
+	</div>
+
+	<div class="input-group mb-1">
+		<div class="input-group-prepend">
+	    	<span class="input-group-text">Issue Price - Low Value</span>
+		</div>
+		<input type="number" id="issue1" class="form-control" aria-label="Issue Price Low Value" value ="50.00">
+		<div class="input-group-append">
+			<span class="input-group-text">%</span>
+		</div>
+	</div>
+
+	<div class="input-group mb-1">
+		<div class="input-group-prepend">
+	    	<span class="input-group-text">Issue Price - Middle Value</span>
+		</div>
+		<input type="number" id="issue2" class="form-control" aria-label="Issue Price Middle Value" value ="100.00">
+		<div class="input-group-append">
+			<span class="input-group-text">%</span>
+		</div>
+	</div>
+
+	<div class="input-group mb-1">
+		<div class="input-group-prepend">
+	    	<span class="input-group-text">Issue Price - High Value</span>
+		</div>
+		<input type="number" id="issue3" class="form-control" aria-label="Issue Price High Value" value ="150.00">
+		<div class="input-group-append">
+			<span class="input-group-text">%</span>
+		</div>
+	</div>
+
+	<div class="input-group mb-1">
+		<div class="input-group-prepend">
+	    	<span class="input-group-text">Issue Price - Highest Value</span>
+		</div>
+		<input type="number" id="issue4" class="form-control" aria-label="Issue Price Highest Value" value ="200.00">
+		<div class="input-group-append">
+			<span class="input-group-text">%</span>
+		</div>
+	</div>
+
+	<div class="input-group mb-1">
+		<div class="input-group-prepend">
+	    	<span class="input-group-text">Sale Price - Lowest Value</span>
+		</div>
+		<input type="number" id="sale0" class="form-control" aria-label="Sale Price Lowest Value" value ="0.00">
+		<div class="input-group-append">
+			<span class="input-group-text">%</span>
+		</div>
+	</div>
+
+	<div class="input-group mb-1">
+		<div class="input-group-prepend">
+	    	<span class="input-group-text">Sale Price - Low Value</span>
+		</div>
+		<input type="number" id="sale1" class="form-control" aria-label="Sale Price Low Value" value ="50.00">
+		<div class="input-group-append">
+			<span class="input-group-text">%</span>
+		</div>
+	</div>
+
+	<div class="input-group mb-1">
+		<div class="input-group-prepend">
+	    	<span class="input-group-text">Sale Price - Middle Value</span>
+		</div>
+		<input type="number" id="sale2" class="form-control" aria-label="Sale Price Middle Value" value ="100.00">
+		<div class="input-group-append">
+			<span class="input-group-text">%</span>
+		</div>
+	</div>
+
+	<div class="input-group mb-1">
+		<div class="input-group-prepend">
+	    	<span class="input-group-text">Sale Price - High Value</span>
+		</div>
+		<input type="number" id="sale3" class="form-control" aria-label="Sale Price High Value" value ="150.00">
+		<div class="input-group-append">
+			<span class="input-group-text">%</span>
+		</div>
+	</div>
+
+	<div class="input-group mb-1">
+		<div class="input-group-prepend">
+	    	<span class="input-group-text">Sale Price - Highest Value</span>
+		</div>
+		<input type="number" id="sale4" class="form-control" aria-label="Sale Price Highest Value" value ="200.00">
+		<div class="input-group-append">
+			<span class="input-group-text">%</span>
+		</div>
+	</div>
+
+	<button type="button" class="btn btn-danger float-left" onclick="resetCustomizeForm();">Reset</button>
+	<button type="button" class="btn btn-success float-right" onclick="setCustomization();">Save</button>
+
+	</form>
+	</div>
+</div>
+
+<!-- Incorrect Date Alert -->
+<div id="date_alert" class="alert alert-danger collapse mb-3" role="alert">
+	This tool only works for vest dates in 2019. Please update the issue/vest date.
+</div>
+
+<!-- Low Deductions Alert -->
+<div id="deduction_alert" class="alert alert-danger collapse mb-3" role="alert">
+	It looks like your deductions are below the standard deduction. Please correct your inputted deductions.
+</div>
+
+<!-- Invalid Percentage Alert -->
+<div id="percentage_alert" class="alert alert-danger collapse mb-3" role="alert">
+	It looks like you've inputted an invalid tax percentage. Please ensure inputted tax percentages are between 0 and 100.
+</div>
+
+<!-- Summary Cards -->
+<div id="summary_cards" class="container-fluid clearfix collapse mb-3">
+
+<div class="card float-left mr-2">
+  <div class="card-header bg-primary text-light">Input Summary - 2019 Taxes</div>
+  <div class="card-body">
+    <div class="container" style="max-width: 70rem;">
+    	<div class="row">
+    	<div class="col-sm" style="max-width: 22rem;">
+    	<!--<p class="card-text small clearfix">-->
+	    	<table class="table table-sm small">
+	    		<tbody>
+	    			<tr>
+	    				<th scope="row">Tax Filing Status</th>
+	    				<td>&nbsp;</td>
+	    				<td id="summary_filing_status" class="text-right">-</td>
+	    			</tr>
+	    			<tr>
+	    				<th scope="row">Income (Withholding)</th>
+	    				<td>$</td>
+	    				<td id="summary_income_withholding" class="text-right">-</td>
+	    			</tr>
+	    			<tr>
+	    				<th scope="row">Income (No Withholding)</th>
+	    				<td>$</td>
+	    				<td id="summary_income_no_withholding" class="text-right">-</td>
+	    			</tr>
+	    			<tr>
+	    				<th scope="row">Cash Bonus</th>
+	    				<td>$</td>
+	    				<td id="summary_cash_bonus" class="text-right">-</td>
+	    			</tr>
+	    			<tr>
+	    				<th scope="row">Federal Tax Deductions</th>
+	    				<td>$</td>
+	    				<td id="summary_fed_deductions" class="text-right">-</td>
+	    			</tr>
+	    			<tr>
+	    				<th scope="row">State Tax Deductions</th>
+	    				<td>$</td>
+	    				<td id="summary_state_deductions" class="text-right">-</td>
+	    			</tr>
+	    			<tr>
+	    				<th scope="row">Federal Supplemental Withholding</th>
+	    				<td>&nbsp;</td>
+	    				<td id="summary_fed_supplemental_withholding" class="text-right">-</td>
+	    			</tr>
+	    			<tr>
+	    				<th scope="row">State Supplemental Withholding</th>
+	    				<td>&nbsp;</td>
+	    				<td id="summary_state_supplemental_withholding" class="text-right">-</td>
+	    			</tr>
+	    			<tr>
+	    				<th scope="row">Local Withholding</th>
+	    				<td>&nbsp;</td>
+	    				<td id="summary_local_withholding" class="text-right">-</td>
+	    			</tr>
+	    		</tbody>
+	    	</table>
+    	</div>
+    	<div class="col-sm" style="max-width: 43rem;">
+	    	<table class="table table-sm small">
+	    		<tbody>
+	    			<tr>
+	    				<th scope="row">Issue Date</th>
+	    				<td id="summary_issue_date" class="text-right">-</td>
+	    			</tr>
+	    			<tr>
+	    				<th scope="row">RSUs Earned @ Issue</th>
+	    				<td id="summary_earned_rsus_issue" class="text-right">-</td>
+	    			</tr>
+	    			<tr>
+	    				<th scope="row">RSUs Earned @ Year End</th>
+	    				<td id="summary_earned_rsus_year_end" class="text-right">-</td>
+	    			</tr>
+	    			<tr>
+	    				<th scope="row">Issue Stock Price</th>
+	    				<td id="summary_issue_price" class="text-right">-</td>
+	    			</tr>
+	    			<tr>
+	    				<th scope="row">Issue Price Estimators</th>
+	    				<td id="summary_issue_estimators" class="text-right">-</td>
+	    			</tr>
+	    			<tr>
+	    				<th scope="row">Sell Stock Price</th>
+	    				<td id="summary_sell_price" class="text-right">-</td>
+	    			</tr>
+	    			<tr>
+	    				<th scope="row">Sell Price Estimators</th>
+	    				<td id="summary_sell_estimators" class="text-right">-</td>
+	    			</tr>
+	    			<tr>
+	    				<th scope="row">% Stock Sold</th>
+	    				<td id="summary_sell_percentage" class="text-right">-</td>
+	    			</tr>
+	    		</tbody>
+	    	</table>
+    	</div>
+    	</div>
+    </div>
+    <p class="card-text font-italic small float-right"><a href="#" class="text-muted" onclick="changeInputs();">Change Inputs</a></p>
+  </div>
+</div>
+
+</div>
+
+<!-- Scenario Cards -->
+<div id="scenario_cards" class="container-fluid clearfix collapse">
+
+<div class="row">
+	<!-- Scenarios 1-5 -->
+	<div class="col-sm" id="scenario_set_0">
+	<div class="card">
+		<div id="overall_scenario_title_0" class="card-header bg-success text-light">Scenario 1</div>
+		<div class="card-body">
+			<p class="card-text">
+				<table class="table table-sm small">
+					<tbody>
+						<tr>
+							<th scope="row">&nbsp;</th>
+							<th id="scenario_title_0" colspan="2" class="scenario0 collapse bg-dark text-light" style="border-spacing: 3px 0;">A</th>
+							<th id="scenario_title_1" colspan="2" class="scenario1 collapse bg-secondary text-light" style="border-spacing: 3px 0;">B</th>
+							<th id="scenario_title_2" colspan="2" class="scenario2 collapse bg-dark text-light" style="border-spacing: 3px 0;">C</th>
+							<th id="scenario_title_3" colspan="2" class="scenario3 collapse bg-secondary text-light" style="border-spacing: 3px 0;">D</th>
+							<th id="scenario_title_4" colspan="2" class="scenario4 collapse bg-dark text-light" style="border-spacing: 3px 0;">E</th>
+						</tr>
+						<tr>
+							<th scope="row" colspan="11" class="bg-info text-light">Income</th>
+						</tr>
+						<tr>
+							<th scope="row">Cash + Bonus</th>
+							<td class="scenario0 collapse">$</td>
+							<td id="cash_bonus_0" class="scenario0 collapse text-right">-</td>
+							<td class="scenario1 collapse">$</td>
+							<td id="cash_bonus_1" class="scenario1 collapse text-right">-</td>
+							<td class="scenario2 collapse">$</td>
+							<td id="cash_bonus_2" class="scenario2 collapse text-right">-</td>
+							<td class="scenario3 collapse">$</td>
+							<td id="cash_bonus_3" class="scenario3 collapse text-right">-</td>
+							<td class="scenario4 collapse">$</td>
+							<td id="cash_bonus_4" class="scenario4 collapse text-right">-</td>
+						</tr>
+						<tr>
+							<th scope="row">Stocks Issued</th>
+							<td class="scenario0 collapse">$</td>
+							<td id="stock_0" class="scenario0 collapse text-right">-</td>
+							<td class="scenario1 collapse">$</td>
+							<td id="stock_1" class="scenario1 collapse text-right">-</td>
+							<td class="scenario2 collapse">$</td>
+							<td id="stock_2" class="scenario2 collapse text-right">-</td>
+							<td class="scenario3 collapse">$</td>
+							<td id="stock_3" class="scenario3 collapse text-right">-</td>
+							<td class="scenario4 collapse">$</td>
+							<td id="stock_4" class="scenario4 collapse text-right">-</td>
+						</tr>
+						<tr>
+							<th scope="row">Capital Gains</th>
+							<td class="scenario0 collapse">$</td>
+							<td id="capital_gains_0" class="scenario0 collapse text-right">-</td>
+							<td class="scenario1 collapse">$</td>
+							<td id="capital_gains_1" class="scenario1 collapse text-right">-</td>
+							<td class="scenario2 collapse">$</td>
+							<td id="capital_gains_2" class="scenario2 collapse text-right">-</td>
+							<td class="scenario3 collapse">$</td>
+							<td id="capital_gains_3" class="scenario3 collapse text-right">-</td>
+							<td class="scenario4 collapse">$</td>
+							<td id="capital_gains_4" class="scenario4 collapse text-right">-</td>
+						</tr>
+						<tr>
+							<th scope="row">Taxable Income</th>
+							<th class="scenario0 collapse">$</th>
+							<th id="taxable_income_0" class="scenario0 collapse text-right">-</th>
+							<th class="scenario1 collapse">$</th>
+							<th id="taxable_income_1" class="scenario1 collapse text-right">-</th>
+							<th class="scenario2 collapse">$</th>
+							<th id="taxable_income_2" class="scenario2 collapse text-right">-</th>
+							<th class="scenario3 collapse">$</th>
+							<th id="taxable_income_3" class="scenario3 collapse text-right">-</th>
+							<th class="scenario4 collapse">$</th>
+							<th id="taxable_income_4" class="scenario4 collapse text-right">-</th>
+						</tr>
+						<tr>
+							<th scope="row" colspan="11" class="bg-info text-light">Total Taxes Owed</th>
+						</tr>
+						<tr>
+							<th scope="row">Federal Taxes Owed</th>
+							<td class="scenario0 collapse">$</td>
+							<td id="fed_tax_0" class="scenario0 collapse text-right">-</td>
+							<td class="scenario1 collapse">$</td>
+							<td id="fed_tax_1" class="scenario1 collapse text-right">-</td>
+							<td class="scenario2 collapse">$</td>
+							<td id="fed_tax_2" class="scenario2 collapse text-right">-</td>
+							<td class="scenario3 collapse">$</td>
+							<td id="fed_tax_3" class="scenario3 collapse text-right">-</td>
+							<td class="scenario4 collapse">$</td>
+							<td id="fed_tax_4" class="scenario4 collapse text-right">-</td>
+						</tr>
+						<tr>
+							<th scope="row">State Taxes Owed</th>
+							<td class="scenario0 collapse">$</td>
+							<td id="state_tax_0" class="scenario0 collapse text-right">-</td>
+							<td class="scenario1 collapse">$</td>
+							<td id="state_tax_1" class="scenario1 collapse text-right">-</td>
+							<td class="scenario2 collapse">$</td>
+							<td id="state_tax_2" class="scenario2 collapse text-right">-</td>
+							<td class="scenario3 collapse">$</td>
+							<td id="state_tax_3" class="scenario3 collapse text-right">-</td>
+							<td class="scenario4 collapse">$</td>
+							<td id="state_tax_4" class="scenario4 collapse text-right">-</td>
+						</tr>
+						<tr>
+							<th scope="row">Local Taxes Owed</th>
+							<td class="scenario0 collapse">$</td>
+							<td id="local_tax_0" class="scenario0 collapse text-right">-</td>
+							<td class="scenario1 collapse">$</td>
+							<td id="local_tax_1" class="scenario1 collapse text-right">-</td>
+							<td class="scenario2 collapse">$</td>
+							<td id="local_tax_2" class="scenario2 collapse text-right">-</td>
+							<td class="scenario3 collapse">$</td>
+							<td id="local_tax_3" class="scenario3 collapse text-right">-</td>
+							<td class="scenario4 collapse">$</td>
+							<td id="local_tax_4" class="scenario4 collapse text-right">-</td>
+						</tr>
+						<tr>
+							<th scope="row" colspan="11" class="bg-info text-light">Taxes Withheld</th>
+						</tr>
+						<tr>
+							<th scope="row">Federal Withholding</th>
+							<td class="scenario0 collapse">$</td>
+							<td id="fed_withholding_0" class="scenario0 collapse text-right">-</td>
+							<td class="scenario1 collapse">$</td>
+							<td id="fed_withholding_1" class="scenario1 collapse text-right">-</td>
+							<td class="scenario2 collapse">$</td>
+							<td id="fed_withholding_2" class="scenario2 collapse text-right">-</td>
+							<td class="scenario3 collapse">$</td>
+							<td id="fed_withholding_3" class="scenario3 collapse text-right">-</td>
+							<td class="scenario4 collapse">$</td>
+							<td id="fed_withholding_4" class="scenario4 collapse text-right">-</td>
+						</tr>
+						<tr>
+							<th scope="row">State Withholding</th>
+							<td class="scenario0 collapse">$</td>
+							<td id="state_withholding_0" class="scenario0 collapse text-right">-</td>
+							<td class="scenario1 collapse">$</td>
+							<td id="state_withholding_1" class="scenario1 collapse text-right">-</td>
+							<td class="scenario2 collapse">$</td>
+							<td id="state_withholding_2" class="scenario2 collapse text-right">-</td>
+							<td class="scenario3 collapse">$</td>
+							<td id="state_withholding_3" class="scenario3 collapse text-right">-</td>
+							<td class="scenario4 collapse">$</td>
+							<td id="state_withholding_4" class="scenario4 collapse text-right">-</td>
+						</tr>
+						<tr>
+							<th scope="row">Local Withholding</th>
+							<td class="scenario0 collapse">$</td>
+							<td id="local_withholding_0" class="scenario0 collapse text-right">-</td>
+							<td class="scenario1 collapse">$</td>
+							<td id="local_withholding_1" class="scenario1 collapse text-right">-</td>
+							<td class="scenario2 collapse">$</td>
+							<td id="local_withholding_2" class="scenario2 collapse text-right">-</td>
+							<td class="scenario3 collapse">$</td>
+							<td id="local_withholding_3" class="scenario3 collapse text-right">-</td>
+							<td class="scenario4 collapse">$</td>
+							<td id="local_withholding_4" class="scenario4 collapse text-right">-</td>
+						</tr>
+						<tr>
+							<th scope="row" colspan="11" class="bg-info text-light">Remaining Taxes Owed</th>
+						</tr>
+						<tr>
+							<th scope="row">Outstanding Federal Taxes</th>
+							<th class="scenario0 collapse">$</th>
+							<th id="fed_tax_owed_0" class="scenario0 collapse text-right">-</th>
+							<td class="scenario1 collapse">$</td>
+							<th id="fed_tax_owed_1" class="scenario1 collapse text-right">-</th>
+							<th class="scenario2 collapse">$</th>
+							<th id="fed_tax_owed_2" class="scenario2 collapse text-right">-</th>
+							<th class="scenario3 collapse">$</th>
+							<th id="fed_tax_owed_3" class="scenario3 collapse text-right">-</th>
+							<th class="scenario4 collapse">$</th>
+							<th id="fed_tax_owed_4" class="scenario4 collapse text-right">-</th>
+						</tr>
+						<tr>
+							<th scope="row">Outstanding State Taxes</th>
+							<th class="scenario0 collapse">$</th>
+							<th id="state_tax_owed_0" class="scenario0 collapse text-right">-</th>
+							<td class="scenario1 collapse">$</td>
+							<th id="state_tax_owed_1" class="scenario1 collapse text-right">-</th>
+							<th class="scenario2 collapse">$</th>
+							<th id="state_tax_owed_2" class="scenario2 collapse text-right">-</th>
+							<th class="scenario3 collapse">$</th>
+							<th id="state_tax_owed_3" class="scenario3 collapse text-right">-</th>
+							<th class="scenario4 collapse">$</th>
+							<th id="state_tax_owed_4" class="scenario4 collapse text-right">-</th>
+						</tr>
+						<tr>
+							<th scope="row">Outstanding Local Taxes</th>
+							<td class="scenario0 collapse">$</td>
+							<td id="local_tax_owed_0" class="scenario0 collapse text-right">-</td>
+							<td class="scenario1 collapse">$</td>
+							<td id="local_tax_owed_1" class="scenario1 collapse text-right">-</td>
+							<td class="scenario2 collapse">$</td>
+							<td id="local_tax_owed_2" class="scenario2 collapse text-right">-</td>
+							<td class="scenario3 collapse">$</td>
+							<td id="local_tax_owed_3" class="scenario3 collapse text-right">-</td>
+							<td class="scenario4 collapse">$</td>
+							<td id="local_tax_owed_4" class="scenario4 collapse text-right">-</td>
+						</tr>
+					</tbody>
+				</table>
+			</p>
+		</div>
+	</div>
+	</div>
+
+	<!-- Scenarios 6-10 -->
+	<div class="col-sm" id="scenario_set_5">
+	<div class="card">
+		<div id="overall_scenario_title_5" class="card-header bg-success text-light">Scenario 2</div>
+		<div class="card-body">
+			<p class="card-text">
+				<table class="table table-sm small">
+					<tbody>
+						<tr>
+							<th scope="row">&nbsp;</th>
+							<th id="scenario_title_5" colspan="2" class="scenario5 collapse bg-dark text-light" style="border-spacing: 3px 0;">A</th>
+							<th id="scenario_title_6" colspan="2" class="scenario6 collapse bg-secondary text-light" style="border-spacing: 3px 0;">B</th>
+							<th id="scenario_title_7" colspan="2" class="scenario7 collapse bg-dark text-light" style="border-spacing: 3px 0;">C</th>
+							<th id="scenario_title_8" colspan="2" class="scenario8 collapse bg-secondary text-light" style="border-spacing: 3px 0;">D</th>
+							<th id="scenario_title_9" colspan="2" class="scenario9 collapse bg-dark text-light" style="border-spacing: 3px 0;">E</th>
+						</tr>
+						<tr>
+							<th scope="row" colspan="11" class="bg-info text-light">Income</th>
+						</tr>
+						<tr>
+							<th scope="row">Cash + Bonus</th>
+							<td class="scenario5 collapse">$</td>
+							<td id="cash_bonus_5" class="scenario5 collapse text-right">-</td>
+							<td class="scenario6 collapse">$</td>
+							<td id="cash_bonus_6" class="scenario6 collapse text-right">-</td>
+							<td class="scenario7 collapse">$</td>
+							<td id="cash_bonus_7" class="scenario7 collapse text-right">-</td>
+							<td class="scenario8 collapse">$</td>
+							<td id="cash_bonus_8" class="scenario8 collapse text-right">-</td>
+							<td class="scenario9 collapse">$</td>
+							<td id="cash_bonus_9" class="scenario9 collapse text-right">-</td>
+						</tr>
+						<tr>
+							<th scope="row">Stocks Issued</th>
+							<td class="scenario5 collapse">$</td>
+							<td id="stock_5" class="scenario5 collapse text-right">-</td>
+							<td class="scenario6 collapse">$</td>
+							<td id="stock_6" class="scenario6 collapse text-right">-</td>
+							<td class="scenario7 collapse">$</td>
+							<td id="stock_7" class="scenario7 collapse text-right">-</td>
+							<td class="scenario8 collapse">$</td>
+							<td id="stock_8" class="scenario8 collapse text-right">-</td>
+							<td class="scenario9 collapse">$</td>
+							<td id="stock_9" class="scenario9 collapse text-right">-</td>
+						</tr>
+						<tr>
+							<th scope="row">Capital Gains</th>
+							<td class="scenario5 collapse">$</td>
+							<td id="capital_gains_5" class="scenario5 collapse text-right">-</td>
+							<td class="scenario6 collapse">$</td>
+							<td id="capital_gains_6" class="scenario6 collapse text-right">-</td>
+							<td class="scenario7 collapse">$</td>
+							<td id="capital_gains_7" class="scenario7 collapse text-right">-</td>
+							<td class="scenario8 collapse">$</td>
+							<td id="capital_gains_8" class="scenario8 collapse text-right">-</td>
+							<td class="scenario9 collapse">$</td>
+							<td id="capital_gains_9" class="scenario9 collapse text-right">-</td>
+						</tr>
+						<tr>
+							<th scope="row">Taxable Income</th>
+							<th class="scenario5 collapse">$</th>
+							<th id="taxable_income_5" class="scenario5 collapse text-right">-</th>
+							<th class="scenario6 collapse">$</th>
+							<th id="taxable_income_6" class="scenario6 collapse text-right">-</th>
+							<th class="scenario7 collapse">$</th>
+							<th id="taxable_income_7" class="scenario7 collapse text-right">-</th>
+							<th class="scenario8 collapse">$</th>
+							<th id="taxable_income_8" class="scenario8 collapse text-right">-</th>
+							<th class="scenario9 collapse">$</th>
+							<th id="taxable_income_9" class="scenario9 collapse text-right">-</th>
+						</tr>
+						<tr>
+							<th scope="row" colspan="11" class="bg-info text-light">Total Taxes Owed</th>
+						</tr>
+						<tr>
+							<th scope="row">Federal Taxes Owed</th>
+							<td class="scenario5 collapse">$</td>
+							<td id="fed_tax_5" class="scenario5 collapse text-right">-</td>
+							<td class="scenario6 collapse">$</td>
+							<td id="fed_tax_6" class="scenario6 collapse text-right">-</td>
+							<td class="scenario7 collapse">$</td>
+							<td id="fed_tax_7" class="scenario7 collapse text-right">-</td>
+							<td class="scenario8 collapse">$</td>
+							<td id="fed_tax_8" class="scenario8 collapse text-right">-</td>
+							<td class="scenario9 collapse">$</td>
+							<td id="fed_tax_9" class="scenario9 collapse text-right">-</td>
+						</tr>
+						<tr>
+							<th scope="row">State Taxes Owed</th>
+							<td class="scenario5 collapse">$</td>
+							<td id="state_tax_5" class="scenario5 collapse text-right">-</td>
+							<td class="scenario6 collapse">$</td>
+							<td id="state_tax_6" class="scenario6 collapse text-right">-</td>
+							<td class="scenario7 collapse">$</td>
+							<td id="state_tax_7" class="scenario7 collapse text-right">-</td>
+							<td class="scenario8 collapse">$</td>
+							<td id="state_tax_8" class="scenario8 collapse text-right">-</td>
+							<td class="scenario9 collapse">$</td>
+							<td id="state_tax_9" class="scenario9 collapse text-right">-</td>
+						</tr>
+						<tr>
+							<th scope="row">Local Taxes Owed</th>
+							<td class="scenario5 collapse">$</td>
+							<td id="local_tax_5" class="scenario5 collapse text-right">-</td>
+							<td class="scenario6 collapse">$</td>
+							<td id="local_tax_6" class="scenario6 collapse text-right">-</td>
+							<td class="scenario7 collapse">$</td>
+							<td id="local_tax_7" class="scenario7 collapse text-right">-</td>
+							<td class="scenario8 collapse">$</td>
+							<td id="local_tax_8" class="scenario8 collapse text-right">-</td>
+							<td class="scenario9 collapse">$</td>
+							<td id="local_tax_9" class="scenario9 collapse text-right">-</td>
+						</tr>
+						<tr>
+							<th scope="row" colspan="11" class="bg-info text-light">Taxes Withheld</th>
+						</tr>
+						<tr>
+							<th scope="row">Federal Withholding</th>
+							<td class="scenario5 collapse">$</td>
+							<td id="fed_withholding_5" class="scenario5 collapse text-right">-</td>
+							<td class="scenario6 collapse">$</td>
+							<td id="fed_withholding_6" class="scenario6 collapse text-right">-</td>
+							<td class="scenario7 collapse">$</td>
+							<td id="fed_withholding_7" class="scenario7 collapse text-right">-</td>
+							<td class="scenario8 collapse">$</td>
+							<td id="fed_withholding_8" class="scenario8 collapse text-right">-</td>
+							<td class="scenario9 collapse">$</td>
+							<td id="fed_withholding_9" class="scenario9 collapse text-right">-</td>
+						</tr>
+						<tr>
+							<th scope="row">State Withholding</th>
+							<td class="scenario5 collapse">$</td>
+							<td id="state_withholding_5" class="scenario5 collapse text-right">-</td>
+							<td class="scenario6 collapse">$</td>
+							<td id="state_withholding_6" class="scenario6 collapse text-right">-</td>
+							<td class="scenario7 collapse">$</td>
+							<td id="state_withholding_7" class="scenario7 collapse text-right">-</td>
+							<td class="scenario8 collapse">$</td>
+							<td id="state_withholding_8" class="scenario8 collapse text-right">-</td>
+							<td class="scenario9 collapse">$</td>
+							<td id="state_withholding_9" class="scenario9 collapse text-right">-</td>
+						</tr>
+						<tr>
+							<th scope="row">Local Withholding</th>
+							<td class="scenario5 collapse">$</td>
+							<td id="local_withholding_5" class="scenario5 collapse text-right">-</td>
+							<td class="scenario6 collapse">$</td>
+							<td id="local_withholding_6" class="scenario6 collapse text-right">-</td>
+							<td class="scenario7 collapse">$</td>
+							<td id="local_withholding_7" class="scenario7 collapse text-right">-</td>
+							<td class="scenario8 collapse">$</td>
+							<td id="local_withholding_8" class="scenario8 collapse text-right">-</td>
+							<td class="scenario9 collapse">$</td>
+							<td id="local_withholding_9" class="scenario9 collapse text-right">-</td>
+						</tr>
+						<tr>
+							<th scope="row" colspan="11" class="bg-info text-light">Remaining Taxes Owed</th>
+						</tr>
+						<tr>
+							<th scope="row">Outstanding Federal Taxes</th>
+							<th class="scenario5 collapse">$</th>
+							<th id="fed_tax_owed_5" class="scenario5 collapse text-right">-</th>
+							<td class="scenario6 collapse">$</td>
+							<th id="fed_tax_owed_6" class="scenario6 collapse text-right">-</th>
+							<th class="scenario7 collapse">$</th>
+							<th id="fed_tax_owed_7" class="scenario7 collapse text-right">-</th>
+							<th class="scenario8 collapse">$</th>
+							<th id="fed_tax_owed_8" class="scenario8 collapse text-right">-</th>
+							<th class="scenario9 collapse">$</th>
+							<th id="fed_tax_owed_9" class="scenario9 collapse text-right">-</th>
+						</tr>
+						<tr>
+							<th scope="row">Outstanding State Taxes</th>
+							<th class="scenario5 collapse">$</th>
+							<th id="state_tax_owed_5" class="scenario5 collapse text-right">-</th>
+							<td class="scenario6 collapse">$</td>
+							<th id="state_tax_owed_6" class="scenario6 collapse text-right">-</th>
+							<th class="scenario7 collapse">$</th>
+							<th id="state_tax_owed_7" class="scenario7 collapse text-right">-</th>
+							<th class="scenario8 collapse">$</th>
+							<th id="state_tax_owed_8" class="scenario8 collapse text-right">-</th>
+							<th class="scenario9 collapse">$</th>
+							<th id="state_tax_owed_9" class="scenario9 collapse text-right">-</th>
+						</tr>
+						<tr>
+							<th scope="row">Outstanding Local Taxes</th>
+							<td class="scenario5 collapse">$</td>
+							<td id="local_tax_owed_5" class="scenario5 collapse text-right">-</td>
+							<td class="scenario6 collapse">$</td>
+							<td id="local_tax_owed_6" class="scenario6 collapse text-right">-</td>
+							<td class="scenario7 collapse">$</td>
+							<td id="local_tax_owed_7" class="scenario7 collapse text-right">-</td>
+							<td class="scenario8 collapse">$</td>
+							<td id="local_tax_owed_8" class="scenario8 collapse text-right">-</td>
+							<td class="scenario9 collapse">$</td>
+							<td id="local_tax_owed_9" class="scenario9 collapse text-right">-</td>
+						</tr>
+					</tbody>
+				</table>
+			</p>
+		</div>
+	</div>
+	</div>
+
+	<!-- Scenarios 11-15 -->
+	<div class="col-sm" id="scenario_set_10">
+	<div class="card">
+		<div id="overall_scenario_title_10" class="card-header bg-success text-light">Scenario 3</div>
+		<div class="card-body">
+			<p class="card-text">
+				<table class="table table-sm small">
+					<tbody>
+						<tr>
+							<th scope="row">&nbsp;</th>
+							<th id="scenario_title_10" colspan="2" class="scenario10 collapse bg-dark text-light" style="border-spacing: 3px 0;">A</th>
+							<th id="scenario_title_11" colspan="2" class="scenario11 collapse bg-secondary text-light" style="border-spacing: 3px 0;">B</th>
+							<th id="scenario_title_12" colspan="2" class="scenario12 collapse bg-dark text-light" style="border-spacing: 3px 0;">C</th>
+							<th id="scenario_title_13" colspan="2" class="scenario13 collapse bg-secondary text-light" style="border-spacing: 3px 0;">D</th>
+							<th id="scenario_title_14" colspan="2" class="scenario14 collapse bg-dark text-light" style="border-spacing: 3px 0;">E</th>
+						</tr>
+						<tr>
+							<th scope="row" colspan="11" class="bg-info text-light">Income</th>
+						</tr>
+						<tr>
+							<th scope="row">Cash + Bonus</th>
+							<td class="scenario10 collapse">$</td>
+							<td id="cash_bonus_10" class="scenario10 collapse text-right">-</td>
+							<td class="scenario11 collapse">$</td>
+							<td id="cash_bonus_11" class="scenario11 collapse text-right">-</td>
+							<td class="scenario12 collapse">$</td>
+							<td id="cash_bonus_12" class="scenario12 collapse text-right">-</td>
+							<td class="scenario13 collapse">$</td>
+							<td id="cash_bonus_13" class="scenario13 collapse text-right">-</td>
+							<td class="scenario14 collapse">$</td>
+							<td id="cash_bonus_14" class="scenario14 collapse text-right">-</td>
+						</tr>
+						<tr>
+							<th scope="row">Stocks Issued</th>
+							<td class="scenario10 collapse">$</td>
+							<td id="stock_10" class="scenario10 collapse text-right">-</td>
+							<td class="scenario11 collapse">$</td>
+							<td id="stock_11" class="scenario11 collapse text-right">-</td>
+							<td class="scenario12 collapse">$</td>
+							<td id="stock_12" class="scenario12 collapse text-right">-</td>
+							<td class="scenario13 collapse">$</td>
+							<td id="stock_13" class="scenario13 collapse text-right">-</td>
+							<td class="scenario14 collapse">$</td>
+							<td id="stock_14" class="scenario14 collapse text-right">-</td>
+						</tr>
+						<tr>
+							<th scope="row">Capital Gains</th>
+							<td class="scenario10 collapse">$</td>
+							<td id="capital_gains_10" class="scenario10 collapse text-right">-</td>
+							<td class="scenario11 collapse">$</td>
+							<td id="capital_gains_11" class="scenario11 collapse text-right">-</td>
+							<td class="scenario12 collapse">$</td>
+							<td id="capital_gains_12" class="scenario12 collapse text-right">-</td>
+							<td class="scenario13 collapse">$</td>
+							<td id="capital_gains_13" class="scenario13 collapse text-right">-</td>
+							<td class="scenario14 collapse">$</td>
+							<td id="capital_gains_14" class="scenario14 collapse text-right">-</td>
+						</tr>
+						<tr>
+							<th scope="row">Taxable Income</th>
+							<th class="scenario10 collapse">$</th>
+							<th id="taxable_income_10" class="scenario10 collapse text-right">-</th>
+							<th class="scenario11 collapse">$</th>
+							<th id="taxable_income_11" class="scenario11 collapse text-right">-</th>
+							<th class="scenario12 collapse">$</th>
+							<th id="taxable_income_12" class="scenario12 collapse text-right">-</th>
+							<th class="scenario13 collapse">$</th>
+							<th id="taxable_income_13" class="scenario13 collapse text-right">-</th>
+							<th class="scenario14 collapse">$</th>
+							<th id="taxable_income_14" class="scenario14 collapse text-right">-</th>
+						</tr>
+						<tr>
+							<th scope="row" colspan="11" class="bg-info text-light">Total Taxes Owed</th>
+						</tr>
+						<tr>
+							<th scope="row">Federal Taxes Owed</th>
+							<td class="scenario10 collapse">$</td>
+							<td id="fed_tax_10" class="scenario10 collapse text-right">-</td>
+							<td class="scenario11 collapse">$</td>
+							<td id="fed_tax_11" class="scenario11 collapse text-right">-</td>
+							<td class="scenario12 collapse">$</td>
+							<td id="fed_tax_12" class="scenario12 collapse text-right">-</td>
+							<td class="scenario13 collapse">$</td>
+							<td id="fed_tax_13" class="scenario13 collapse text-right">-</td>
+							<td class="scenario14 collapse">$</td>
+							<td id="fed_tax_14" class="scenario14 collapse text-right">-</td>
+						</tr>
+						<tr>
+							<th scope="row">State Taxes Owed</th>
+							<td class="scenario10 collapse">$</td>
+							<td id="state_tax_10" class="scenario10 collapse text-right">-</td>
+							<td class="scenario11 collapse">$</td>
+							<td id="state_tax_11" class="scenario11 collapse text-right">-</td>
+							<td class="scenario12 collapse">$</td>
+							<td id="state_tax_12" class="scenario12 collapse text-right">-</td>
+							<td class="scenario13 collapse">$</td>
+							<td id="state_tax_13" class="scenario13 collapse text-right">-</td>
+							<td class="scenario14 collapse">$</td>
+							<td id="state_tax_14" class="scenario14 collapse text-right">-</td>
+						</tr>
+						<tr>
+							<th scope="row">Local Taxes Owed</th>
+							<td class="scenario10 collapse">$</td>
+							<td id="local_tax_10" class="scenario10 collapse text-right">-</td>
+							<td class="scenario11 collapse">$</td>
+							<td id="local_tax_11" class="scenario11 collapse text-right">-</td>
+							<td class="scenario12 collapse">$</td>
+							<td id="local_tax_12" class="scenario12 collapse text-right">-</td>
+							<td class="scenario13 collapse">$</td>
+							<td id="local_tax_13" class="scenario13 collapse text-right">-</td>
+							<td class="scenario14 collapse">$</td>
+							<td id="local_tax_14" class="scenario14 collapse text-right">-</td>
+						</tr>
+						<tr>
+							<th scope="row" colspan="11" class="bg-info text-light">Taxes Withheld</th>
+						</tr>
+						<tr>
+							<th scope="row">Federal Withholding</th>
+							<td class="scenario10 collapse">$</td>
+							<td id="fed_withholding_10" class="scenario10 collapse text-right">-</td>
+							<td class="scenario11 collapse">$</td>
+							<td id="fed_withholding_11" class="scenario11 collapse text-right">-</td>
+							<td class="scenario12 collapse">$</td>
+							<td id="fed_withholding_12" class="scenario12 collapse text-right">-</td>
+							<td class="scenario13 collapse">$</td>
+							<td id="fed_withholding_13" class="scenario13 collapse text-right">-</td>
+							<td class="scenario14 collapse">$</td>
+							<td id="fed_withholding_14" class="scenario14 collapse text-right">-</td>
+						</tr>
+						<tr>
+							<th scope="row">State Withholding</th>
+							<td class="scenario10 collapse">$</td>
+							<td id="state_withholding_10" class="scenario10 collapse text-right">-</td>
+							<td class="scenario11 collapse">$</td>
+							<td id="state_withholding_11" class="scenario11 collapse text-right">-</td>
+							<td class="scenario12 collapse">$</td>
+							<td id="state_withholding_12" class="scenario12 collapse text-right">-</td>
+							<td class="scenario13 collapse">$</td>
+							<td id="state_withholding_13" class="scenario13 collapse text-right">-</td>
+							<td class="scenario14 collapse">$</td>
+							<td id="state_withholding_14" class="scenario14 collapse text-right">-</td>
+						</tr>
+						<tr>
+							<th scope="row">Local Withholding</th>
+							<td class="scenario10 collapse">$</td>
+							<td id="local_withholding_10" class="scenario10 collapse text-right">-</td>
+							<td class="scenario11 collapse">$</td>
+							<td id="local_withholding_11" class="scenario11 collapse text-right">-</td>
+							<td class="scenario12 collapse">$</td>
+							<td id="local_withholding_12" class="scenario12 collapse text-right">-</td>
+							<td class="scenario13 collapse">$</td>
+							<td id="local_withholding_13" class="scenario13 collapse text-right">-</td>
+							<td class="scenario14 collapse">$</td>
+							<td id="local_withholding_14" class="scenario14 collapse text-right">-</td>
+						</tr>
+						<tr>
+							<th scope="row" colspan="11" class="bg-info text-light">Remaining Taxes Owed</th>
+						</tr>
+						<tr>
+							<th scope="row">Outstanding Federal Taxes</th>
+							<th class="scenario10 collapse">$</th>
+							<th id="fed_tax_owed_10" class="scenario10 collapse text-right">-</th>
+							<td class="scenario11 collapse">$</td>
+							<th id="fed_tax_owed_11" class="scenario11 collapse text-right">-</th>
+							<th class="scenario12 collapse">$</th>
+							<th id="fed_tax_owed_12" class="scenario12 collapse text-right">-</th>
+							<th class="scenario13 collapse">$</th>
+							<th id="fed_tax_owed_13" class="scenario13 collapse text-right">-</th>
+							<th class="scenario14 collapse">$</th>
+							<th id="fed_tax_owed_14" class="scenario14 collapse text-right">-</th>
+						</tr>
+						<tr>
+							<th scope="row">Outstanding State Taxes</th>
+							<th class="scenario10 collapse">$</th>
+							<th id="state_tax_owed_10" class="scenario10 collapse text-right">-</th>
+							<td class="scenario11 collapse">$</td>
+							<th id="state_tax_owed_11" class="scenario11 collapse text-right">-</th>
+							<th class="scenario12 collapse">$</th>
+							<th id="state_tax_owed_12" class="scenario12 collapse text-right">-</th>
+							<th class="scenario13 collapse">$</th>
+							<th id="state_tax_owed_13" class="scenario13 collapse text-right">-</th>
+							<th class="scenario14 collapse">$</th>
+							<th id="state_tax_owed_14" class="scenario14 collapse text-right">-</th>
+						</tr>
+						<tr>
+							<th scope="row">Outstanding Local Taxes</th>
+							<td class="scenario10 collapse">$</td>
+							<td id="local_tax_owed_10" class="scenario10 collapse text-right">-</td>
+							<td class="scenario11 collapse">$</td>
+							<td id="local_tax_owed_11" class="scenario11 collapse text-right">-</td>
+							<td class="scenario12 collapse">$</td>
+							<td id="local_tax_owed_12" class="scenario12 collapse text-right">-</td>
+							<td class="scenario13 collapse">$</td>
+							<td id="local_tax_owed_13" class="scenario13 collapse text-right">-</td>
+							<td class="scenario14 collapse">$</td>
+							<td id="local_tax_owed_14" class="scenario14 collapse text-right">-</td>
+						</tr>
+					</tbody>
+				</table>
+			</p>
+		</div>
+	</div>
+	</div>
+
+	<!-- Scenarios 16-20 -->
+	<div class="col-sm" id="scenario_set_15">
+	<div class="card">
+		<div id="overall_scenario_title_15" class="card-header bg-success text-light">Scenario 4</div>
+		<div class="card-body">
+			<p class="card-text">
+				<table class="table table-sm small">
+					<tbody>
+						<tr>
+							<th scope="row">&nbsp;</th>
+							<th id="scenario_title_15" colspan="2" class="scenario15 collapse bg-dark text-light" style="border-spacing: 3px 0;">A</th>
+							<th id="scenario_title_16" colspan="2" class="scenario16 collapse bg-secondary text-light" style="border-spacing: 3px 0;">B</th>
+							<th id="scenario_title_17" colspan="2" class="scenario17 collapse bg-dark text-light" style="border-spacing: 3px 0;">C</th>
+							<th id="scenario_title_18" colspan="2" class="scenario18 collapse bg-secondary text-light" style="border-spacing: 3px 0;">D</th>
+							<th id="scenario_title_19" colspan="2" class="scenario19 collapse bg-dark text-light" style="border-spacing: 3px 0;">E</th>
+						</tr>
+						<tr>
+							<th scope="row" colspan="11" class="bg-info text-light">Income</th>
+						</tr>
+						<tr>
+							<th scope="row">Cash + Bonus</th>
+							<td class="scenario15 collapse">$</td>
+							<td id="cash_bonus_15" class="scenario15 collapse text-right">-</td>
+							<td class="scenario16 collapse">$</td>
+							<td id="cash_bonus_16" class="scenario16 collapse text-right">-</td>
+							<td class="scenario17 collapse">$</td>
+							<td id="cash_bonus_17" class="scenario17 collapse text-right">-</td>
+							<td class="scenario18 collapse">$</td>
+							<td id="cash_bonus_18" class="scenario18 collapse text-right">-</td>
+							<td class="scenario19 collapse">$</td>
+							<td id="cash_bonus_19" class="scenario19 collapse text-right">-</td>
+						</tr>
+						<tr>
+							<th scope="row">Stocks Issued</th>
+							<td class="scenario15 collapse">$</td>
+							<td id="stock_15" class="scenario15 collapse text-right">-</td>
+							<td class="scenario16 collapse">$</td>
+							<td id="stock_16" class="scenario16 collapse text-right">-</td>
+							<td class="scenario17 collapse">$</td>
+							<td id="stock_17" class="scenario17 collapse text-right">-</td>
+							<td class="scenario18 collapse">$</td>
+							<td id="stock_18" class="scenario18 collapse text-right">-</td>
+							<td class="scenario19 collapse">$</td>
+							<td id="stock_19" class="scenario19 collapse text-right">-</td>
+						</tr>
+						<tr>
+							<th scope="row">Capital Gains</th>
+							<td class="scenario15 collapse">$</td>
+							<td id="capital_gains_15" class="scenario15 collapse text-right">-</td>
+							<td class="scenario16 collapse">$</td>
+							<td id="capital_gains_16" class="scenario16 collapse text-right">-</td>
+							<td class="scenario17 collapse">$</td>
+							<td id="capital_gains_17" class="scenario17 collapse text-right">-</td>
+							<td class="scenario18 collapse">$</td>
+							<td id="capital_gains_18" class="scenario18 collapse text-right">-</td>
+							<td class="scenario19 collapse">$</td>
+							<td id="capital_gains_19" class="scenario19 collapse text-right">-</td>
+						</tr>
+						<tr>
+							<th scope="row">Taxable Income</th>
+							<th class="scenario15 collapse">$</th>
+							<th id="taxable_income_15" class="scenario15 collapse text-right">-</th>
+							<th class="scenario16 collapse">$</th>
+							<th id="taxable_income_16" class="scenario16 collapse text-right">-</th>
+							<th class="scenario17 collapse">$</th>
+							<th id="taxable_income_17" class="scenario17 collapse text-right">-</th>
+							<th class="scenario18 collapse">$</th>
+							<th id="taxable_income_18" class="scenario18 collapse text-right">-</th>
+							<th class="scenario19 collapse">$</th>
+							<th id="taxable_income_19" class="scenario19 collapse text-right">-</th>
+						</tr>
+						<tr>
+							<th scope="row" colspan="11" class="bg-info text-light">Total Taxes Owed</th>
+						</tr>
+						<tr>
+							<th scope="row">Federal Taxes Owed</th>
+							<td class="scenario15 collapse">$</td>
+							<td id="fed_tax_15" class="scenario15 collapse text-right">-</td>
+							<td class="scenario16 collapse">$</td>
+							<td id="fed_tax_16" class="scenario16 collapse text-right">-</td>
+							<td class="scenario17 collapse">$</td>
+							<td id="fed_tax_17" class="scenario17 collapse text-right">-</td>
+							<td class="scenario18 collapse">$</td>
+							<td id="fed_tax_18" class="scenario18 collapse text-right">-</td>
+							<td class="scenario19 collapse">$</td>
+							<td id="fed_tax_19" class="scenario19 collapse text-right">-</td>
+						</tr>
+						<tr>
+							<th scope="row">State Taxes Owed</th>
+							<td class="scenario15 collapse">$</td>
+							<td id="state_tax_15" class="scenario15 collapse text-right">-</td>
+							<td class="scenario16 collapse">$</td>
+							<td id="state_tax_16" class="scenario16 collapse text-right">-</td>
+							<td class="scenario17 collapse">$</td>
+							<td id="state_tax_17" class="scenario17 collapse text-right">-</td>
+							<td class="scenario18 collapse">$</td>
+							<td id="state_tax_18" class="scenario18 collapse text-right">-</td>
+							<td class="scenario19 collapse">$</td>
+							<td id="state_tax_19" class="scenario19 collapse text-right">-</td>
+						</tr>
+						<tr>
+							<th scope="row">Local Taxes Owed</th>
+							<td class="scenario15 collapse">$</td>
+							<td id="local_tax_15" class="scenario15 collapse text-right">-</td>
+							<td class="scenario16 collapse">$</td>
+							<td id="local_tax_16" class="scenario16 collapse text-right">-</td>
+							<td class="scenario17 collapse">$</td>
+							<td id="local_tax_17" class="scenario17 collapse text-right">-</td>
+							<td class="scenario18 collapse">$</td>
+							<td id="local_tax_18" class="scenario18 collapse text-right">-</td>
+							<td class="scenario19 collapse">$</td>
+							<td id="local_tax_19" class="scenario19 collapse text-right">-</td>
+						</tr>
+						<tr>
+							<th scope="row" colspan="11" class="bg-info text-light">Taxes Withheld</th>
+						</tr>
+						<tr>
+							<th scope="row">Federal Withholding</th>
+							<td class="scenario15 collapse">$</td>
+							<td id="fed_withholding_15" class="scenario15 collapse text-right">-</td>
+							<td class="scenario16 collapse">$</td>
+							<td id="fed_withholding_16" class="scenario16 collapse text-right">-</td>
+							<td class="scenario17 collapse">$</td>
+							<td id="fed_withholding_17" class="scenario17 collapse text-right">-</td>
+							<td class="scenario18 collapse">$</td>
+							<td id="fed_withholding_18" class="scenario18 collapse text-right">-</td>
+							<td class="scenario19 collapse">$</td>
+							<td id="fed_withholding_19" class="scenario19 collapse text-right">-</td>
+						</tr>
+						<tr>
+							<th scope="row">State Withholding</th>
+							<td class="scenario15 collapse">$</td>
+							<td id="state_withholding_15" class="scenario15 collapse text-right">-</td>
+							<td class="scenario16 collapse">$</td>
+							<td id="state_withholding_16" class="scenario16 collapse text-right">-</td>
+							<td class="scenario17 collapse">$</td>
+							<td id="state_withholding_17" class="scenario17 collapse text-right">-</td>
+							<td class="scenario18 collapse">$</td>
+							<td id="state_withholding_18" class="scenario18 collapse text-right">-</td>
+							<td class="scenario19 collapse">$</td>
+							<td id="state_withholding_19" class="scenario19 collapse text-right">-</td>
+						</tr>
+						<tr>
+							<th scope="row">Local Withholding</th>
+							<td class="scenario15 collapse">$</td>
+							<td id="local_withholding_15" class="scenario15 collapse text-right">-</td>
+							<td class="scenario16 collapse">$</td>
+							<td id="local_withholding_16" class="scenario16 collapse text-right">-</td>
+							<td class="scenario17 collapse">$</td>
+							<td id="local_withholding_17" class="scenario17 collapse text-right">-</td>
+							<td class="scenario18 collapse">$</td>
+							<td id="local_withholding_18" class="scenario18 collapse text-right">-</td>
+							<td class="scenario19 collapse">$</td>
+							<td id="local_withholding_19" class="scenario19 collapse text-right">-</td>
+						</tr>
+						<tr>
+							<th scope="row" colspan="11" class="bg-info text-light">Remaining Taxes Owed</th>
+						</tr>
+						<tr>
+							<th scope="row">Outstanding Federal Taxes</th>
+							<th class="scenario15 collapse">$</th>
+							<th id="fed_tax_owed_15" class="scenario15 collapse text-right">-</th>
+							<td class="scenario16 collapse">$</td>
+							<th id="fed_tax_owed_16" class="scenario16 collapse text-right">-</th>
+							<th class="scenario17 collapse">$</th>
+							<th id="fed_tax_owed_17" class="scenario17 collapse text-right">-</th>
+							<th class="scenario18 collapse">$</th>
+							<th id="fed_tax_owed_18" class="scenario18 collapse text-right">-</th>
+							<th class="scenario19 collapse">$</th>
+							<th id="fed_tax_owed_19" class="scenario19 collapse text-right">-</th>
+						</tr>
+						<tr>
+							<th scope="row">Outstanding State Taxes</th>
+							<th class="scenario15 collapse">$</th>
+							<th id="state_tax_owed_15" class="scenario15 collapse text-right">-</th>
+							<td class="scenario16 collapse">$</td>
+							<th id="state_tax_owed_16" class="scenario16 collapse text-right">-</th>
+							<th class="scenario17 collapse">$</th>
+							<th id="state_tax_owed_17" class="scenario17 collapse text-right">-</th>
+							<th class="scenario18 collapse">$</th>
+							<th id="state_tax_owed_18" class="scenario18 collapse text-right">-</th>
+							<th class="scenario19 collapse">$</th>
+							<th id="state_tax_owed_19" class="scenario19 collapse text-right">-</th>
+						</tr>
+						<tr>
+							<th scope="row">Outstanding Local Taxes</th>
+							<td class="scenario15 collapse">$</td>
+							<td id="local_tax_owed_15" class="scenario15 collapse text-right">-</td>
+							<td class="scenario16 collapse">$</td>
+							<td id="local_tax_owed_16" class="scenario16 collapse text-right">-</td>
+							<td class="scenario17 collapse">$</td>
+							<td id="local_tax_owed_17" class="scenario17 collapse text-right">-</td>
+							<td class="scenario18 collapse">$</td>
+							<td id="local_tax_owed_18" class="scenario18 collapse text-right">-</td>
+							<td class="scenario19 collapse">$</td>
+							<td id="local_tax_owed_19" class="scenario19 collapse text-right">-</td>
+						</tr>
+					</tbody>
+				</table>
+			</p>
+		</div>
+	</div>
+	</div>
+
+	<!-- Scenarios 21-25 -->
+	<div class="col-sm" id="scenario_set_20">
+	<div class="card">
+		<div id="overall_scenario_title_20" class="card-header bg-success text-light">Scenario 5</div>
+		<div class="card-body">
+			<p class="card-text">
+				<table class="table table-sm small">
+					<tbody>
+						<tr>
+							<th scope="row">&nbsp;</th>
+							<th id="scenario_title_20" colspan="2" class="scenario20 collapse bg-dark text-light" style="border-spacing: 3px 0;">A</th>
+							<th id="scenario_title_21" colspan="2" class="scenario21 collapse bg-secondary text-light" style="border-spacing: 3px 0;">B</th>
+							<th id="scenario_title_22" colspan="2" class="scenario22 collapse bg-dark text-light" style="border-spacing: 3px 0;">C</th>
+							<th id="scenario_title_23" colspan="2" class="scenario23 collapse bg-secondary text-light" style="border-spacing: 3px 0;">D</th>
+							<th id="scenario_title_24" colspan="2" class="scenario24 collapse bg-dark text-light" style="border-spacing: 3px 0;">E</th>
+						</tr>
+						<tr>
+							<th scope="row" colspan="11" class="bg-info text-light">Income</th>
+						</tr>
+						<tr>
+							<th scope="row">Cash + Bonus</th>
+							<td class="scenario20 collapse">$</td>
+							<td id="cash_bonus_20" class="scenario20 collapse text-right">-</td>
+							<td class="scenario21 collapse">$</td>
+							<td id="cash_bonus_21" class="scenario21 collapse text-right">-</td>
+							<td class="scenario22 collapse">$</td>
+							<td id="cash_bonus_22" class="scenario22 collapse text-right">-</td>
+							<td class="scenario23 collapse">$</td>
+							<td id="cash_bonus_23" class="scenario23 collapse text-right">-</td>
+							<td class="scenario24 collapse">$</td>
+							<td id="cash_bonus_24" class="scenario24 collapse text-right">-</td>
+						</tr>
+						<tr>
+							<th scope="row">Stocks Issued</th>
+							<td class="scenario20 collapse">$</td>
+							<td id="stock_20" class="scenario20 collapse text-right">-</td>
+							<td class="scenario21 collapse">$</td>
+							<td id="stock_21" class="scenario21 collapse text-right">-</td>
+							<td class="scenario22 collapse">$</td>
+							<td id="stock_22" class="scenario22 collapse text-right">-</td>
+							<td class="scenario23 collapse">$</td>
+							<td id="stock_23" class="scenario23 collapse text-right">-</td>
+							<td class="scenario24 collapse">$</td>
+							<td id="stock_24" class="scenario24 collapse text-right">-</td>
+						</tr>
+						<tr>
+							<th scope="row">Capital Gains</th>
+							<td class="scenario20 collapse">$</td>
+							<td id="capital_gains_20" class="scenario20 collapse text-right">-</td>
+							<td class="scenario21 collapse">$</td>
+							<td id="capital_gains_21" class="scenario21 collapse text-right">-</td>
+							<td class="scenario22 collapse">$</td>
+							<td id="capital_gains_22" class="scenario22 collapse text-right">-</td>
+							<td class="scenario23 collapse">$</td>
+							<td id="capital_gains_23" class="scenario23 collapse text-right">-</td>
+							<td class="scenario24 collapse">$</td>
+							<td id="capital_gains_24" class="scenario24 collapse text-right">-</td>
+						</tr>
+						<tr>
+							<th scope="row">Taxable Income</th>
+							<th class="scenario20 collapse">$</th>
+							<th id="taxable_income_20" class="scenario20 collapse text-right">-</th>
+							<th class="scenario21 collapse">$</th>
+							<th id="taxable_income_21" class="scenario21 collapse text-right">-</th>
+							<th class="scenario22 collapse">$</th>
+							<th id="taxable_income_22" class="scenario22 collapse text-right">-</th>
+							<th class="scenario23 collapse">$</th>
+							<th id="taxable_income_23" class="scenario23 collapse text-right">-</th>
+							<th class="scenario24 collapse">$</th>
+							<th id="taxable_income_24" class="scenario24 collapse text-right">-</th>
+						</tr>
+						<tr>
+							<th scope="row" colspan="11" class="bg-info text-light">Total Taxes Owed</th>
+						</tr>
+						<tr>
+							<th scope="row">Federal Taxes Owed</th>
+							<td class="scenario20 collapse">$</td>
+							<td id="fed_tax_20" class="scenario20 collapse text-right">-</td>
+							<td class="scenario21 collapse">$</td>
+							<td id="fed_tax_21" class="scenario21 collapse text-right">-</td>
+							<td class="scenario22 collapse">$</td>
+							<td id="fed_tax_22" class="scenario22 collapse text-right">-</td>
+							<td class="scenario23 collapse">$</td>
+							<td id="fed_tax_23" class="scenario23 collapse text-right">-</td>
+							<td class="scenario24 collapse">$</td>
+							<td id="fed_tax_24" class="scenario24 collapse text-right">-</td>
+						</tr>
+						<tr>
+							<th scope="row">State Taxes Owed</th>
+							<td class="scenario20 collapse">$</td>
+							<td id="state_tax_20" class="scenario20 collapse text-right">-</td>
+							<td class="scenario21 collapse">$</td>
+							<td id="state_tax_21" class="scenario21 collapse text-right">-</td>
+							<td class="scenario22 collapse">$</td>
+							<td id="state_tax_22" class="scenario22 collapse text-right">-</td>
+							<td class="scenario23 collapse">$</td>
+							<td id="state_tax_23" class="scenario23 collapse text-right">-</td>
+							<td class="scenario24 collapse">$</td>
+							<td id="state_tax_24" class="scenario24 collapse text-right">-</td>
+						</tr>
+						<tr>
+							<th scope="row">Local Taxes Owed</th>
+							<td class="scenario20 collapse">$</td>
+							<td id="local_tax_20" class="scenario20 collapse text-right">-</td>
+							<td class="scenario21 collapse">$</td>
+							<td id="local_tax_21" class="scenario21 collapse text-right">-</td>
+							<td class="scenario22 collapse">$</td>
+							<td id="local_tax_22" class="scenario22 collapse text-right">-</td>
+							<td class="scenario23 collapse">$</td>
+							<td id="local_tax_23" class="scenario23 collapse text-right">-</td>
+							<td class="scenario24 collapse">$</td>
+							<td id="local_tax_24" class="scenario24 collapse text-right">-</td>
+						</tr>
+						<tr>
+							<th scope="row" colspan="11" class="bg-info text-light">Taxes Withheld</th>
+						</tr>
+						<tr>
+							<th scope="row">Federal Withholding</th>
+							<td class="scenario20 collapse">$</td>
+							<td id="fed_withholding_20" class="scenario20 collapse text-right">-</td>
+							<td class="scenario21 collapse">$</td>
+							<td id="fed_withholding_21" class="scenario21 collapse text-right">-</td>
+							<td class="scenario22 collapse">$</td>
+							<td id="fed_withholding_22" class="scenario22 collapse text-right">-</td>
+							<td class="scenario23 collapse">$</td>
+							<td id="fed_withholding_23" class="scenario23 collapse text-right">-</td>
+							<td class="scenario24 collapse">$</td>
+							<td id="fed_withholding_24" class="scenario24 collapse text-right">-</td>
+						</tr>
+						<tr>
+							<th scope="row">State Withholding</th>
+							<td class="scenario20 collapse">$</td>
+							<td id="state_withholding_20" class="scenario20 collapse text-right">-</td>
+							<td class="scenario21 collapse">$</td>
+							<td id="state_withholding_21" class="scenario21 collapse text-right">-</td>
+							<td class="scenario22 collapse">$</td>
+							<td id="state_withholding_22" class="scenario22 collapse" text-right>-</td>
+							<td class="scenario23 collapse">$</td>
+							<td id="state_withholding_23" class="scenario23 collapse text-right">-</td>
+							<td class="scenario24 collapse">$</td>
+							<td id="state_withholding_24" class="scenario24 collapse text-right">-</td>
+						</tr>
+						<tr>
+							<th scope="row">Local Withholding</th>
+							<td class="scenario20 collapse">$</td>
+							<td id="local_withholding_20" class="scenario20 collapse text-right">-</td>
+							<td class="scenario21 collapse">$</td>
+							<td id="local_withholding_21" class="scenario21 collapse text-right">-</td>
+							<td class="scenario22 collapse">$</td>
+							<td id="local_withholding_22" class="scenario22 collapse text-right">-</td>
+							<td class="scenario23 collapse">$</td>
+							<td id="local_withholding_23" class="scenario23 collapse text-right">-</td>
+							<td class="scenario24 collapse">$</td>
+							<td id="local_withholding_24" class="scenario24 collapse text-right">-</td>
+						</tr>
+						<tr>
+							<th scope="row" colspan="11" class="bg-info text-light">Remaining Taxes Owed</th>
+						</tr>
+						<tr>
+							<th scope="row">Outstanding Federal Taxes</th>
+							<th class="scenario20 collapse">$</th>
+							<th id="fed_tax_owed_20" class="scenario20 collapse text-right">-</th>
+							<td class="scenario21 collapse">$</td>
+							<th id="fed_tax_owed_21" class="scenario21 collapse text-right">-</th>
+							<th class="scenario22 collapse">$</th>
+							<th id="fed_tax_owed_22" class="scenario22 collapse text-right">-</th>
+							<th class="scenario23 collapse">$</th>
+							<th id="fed_tax_owed_23" class="scenario23 collapse text-right">-</th>
+							<th class="scenario24 collapse">$</th>
+							<th id="fed_tax_owed_24" class="scenario24 collapse text-right">-</th>
+						</tr>
+						<tr>
+							<th scope="row">Outstanding State Taxes</th>
+							<th class="scenario20 collapse">$</th>
+							<th id="state_tax_owed_20" class="scenario20 collapse text-right">-</th>
+							<td class="scenario21 collapse">$</td>
+							<th id="state_tax_owed_21" class="scenario21 collapse text-right">-</th>
+							<th class="scenario22 collapse">$</th>
+							<th id="state_tax_owed_22" class="scenario22 collapse text-right">-</th>
+							<th class="scenario23 collapse">$</th>
+							<th id="state_tax_owed_23" class="scenario23 collapse text-right">-</th>
+							<th class="scenario24 collapse">$</th>
+							<th id="state_tax_owed_24" class="scenario24 collapse text-right">-</th>
+						</tr>
+						<tr>
+							<th scope="row">Outstanding Local Taxes</th>
+							<td class="scenario20 collapse">$</td>
+							<td id="local_tax_owed_20" class="scenario20 collapse text-right">-</td>
+							<td class="scenario21 collapse">$</td>
+							<td id="local_tax_owed_21" class="scenario21 collapse text-right">-</td>
+							<td class="scenario22 collapse">$</td>
+							<td id="local_tax_owed_22" class="scenario22 collapse text-right">-</td>
+							<td class="scenario23 collapse">$</td>
+							<td id="local_tax_owed_23" class="scenario23 collapse text-right">-</td>
+							<td class="scenario24 collapse">$</td>
+							<td id="local_tax_owed_24" class="scenario24 collapse text-right">-</td>
+						</tr>
+					</tbody>
+				</table>
+			</p>
+		</div>
+	</div>
+	</div>
+</div>
+
+</div>
+
+</body>
+
+</html>
